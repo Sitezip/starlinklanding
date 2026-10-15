@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-58FTZ236QM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-58FTZ236QM');
+</script>
 <title>Get Starlink — Referral</title>
 <meta name="description" content="High-speed, low-latency internet from space. Order Starlink with this referral link.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -403,14 +411,37 @@
   // Every link points at the referral URL (works for middle-click / copy link too)
   document.querySelectorAll("a").forEach(a => { a.href = REFERRAL_URL; a.rel = "noopener"; });
 
+  // Log the click to Google Analytics, then forward (with a fallback so a blocked tag never stalls the redirect)
+  let leaving = false;
+  function goToReferral(source) {
+    if (leaving) return;
+    leaving = true;
+    const go = () => { window.location.href = REFERRAL_URL; };
+    const fallback = setTimeout(go, 800);
+    gtag("event", "referral_click", {
+      click_source: source,
+      transport_type: "beacon",
+      event_callback: () => { clearTimeout(fallback); go(); }
+    });
+  }
+  function clickSource(el) {
+    const link = el.closest("a");
+    if (link) return link.textContent.trim().replace(/\s+/g, " ").slice(0, 80);
+    const section = el.closest("nav, header, section, footer");
+    return section ? (section.className || section.tagName.toLowerCase()) : "page";
+  }
+
   // Clicking anywhere on the page forwards to the referral URL
   document.addEventListener("click", e => {
-    if (e.target.closest("a") && (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1)) return;
+    if (e.target.closest("a") && (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1)) {
+      gtag("event", "referral_click", { click_source: clickSource(e.target), transport_type: "beacon" });
+      return;
+    }
     e.preventDefault();
-    window.location.href = REFERRAL_URL;
+    goToReferral(clickSource(e.target));
   });
   document.addEventListener("keydown", e => {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); window.location.href = REFERRAL_URL; }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goToReferral("keyboard"); }
   });
 
   // Nav background on scroll
